@@ -1,0 +1,7 @@
+Django
+moviepy
+SpeechRecognition
+googletrans
+gTTS
+pyaudio
+pydub

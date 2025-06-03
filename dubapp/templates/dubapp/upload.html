@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Video</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'dubapp/styles.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>Upload Video for Dubbing</h1>
+        <form id="upload-form" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="drop-area" id="drop-area">
+                <p>Choose or drop your files here</p>
+                <input type="file" name="video" id="file-input" accept="video/*">
+                <input type="hidden" name="language" id="language-input">
+            </div>
+            <select name="language" id="language-select">
+                <option value="kn">Kannada</option>
+                <option value="te">Telugu</option>
+                <option value="ta">Tamil</option>
+                <option value="hi">Hindi</option>
+            </select>
+            <button type="submit">Upload and Process</button>
+        </form>
+        
+        <!-- Video preview container -->
+        <div id="video-preview-container" style="display: none;">
+            <h2>Video Preview</h2>
+            <video id="video-preview" width="600" controls>
+                <source id="video-source" src="" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        
+        <!-- Progress container -->
+        <div id="progress-container" style="display: none;">
+            <h2>Processing Progress</h2>
+            <div id="progress-bar" style="width: 100%; background: #f4f4f4; border: 1px solid #ddd; border-radius: 4px;">
+                <div id="progress" style="height: 30px; width: 0; background: #28a745; border-radius: 4px; text-align: center; color: white;"></div>
+            </div>
+            <p id="progress-text">Starting...</p>
+        </div>
+    </div>
+
+    <script>
+        const dropArea = document.getElementById('drop-area');
+        const fileInput = document.getElementById('file-input');
+        const languageSelect = document.getElementById('language-select');
+        const languageInput = document.getElementById('language-input');
+        const videoPreviewContainer = document.getElementById('video-preview-container');
+        const videoPreview = document.getElementById('video-preview');
+        const videoSource = document.getElementById('video-source');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress');
+        const progressText = document.getElementById('progress-text');
+
+        dropArea.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            dropArea.classList.add('drag-over');
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('drag-over');
+        });
+
+        dropArea.addEventListener('drop', (event) => {
+            event.preventDefault();
+            dropArea.classList.remove('drag-over');
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                showVideoPreview(files[0]);
+            }
+        });
+
+        dropArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', () => {
+            const files = fileInput.files;
+            if (files.length > 0) {
+                dropArea.querySelector('p').textContent = files[0].name;
+                showVideoPreview(files[0]);
+            }
+        });
+
+        languageSelect.addEventListener('change', () => {
+            languageInput.value = languageSelect.value;
+        });
+
+        function showVideoPreview(file) {
+            const fileURL = URL.createObjectURL(file);
+            videoSource.src = fileURL;
+            videoPreview.load();
+            videoPreviewContainer.style.display = 'block';
+        }
+
+        function updateProgress(task, percentage) {
+            progressBar.style.width = percentage + '%';
+            progressText.textContent = `${task}: ${percentage}% completed`;
+        }
+
+        async function pollProgress() {
+            const response = await fetch('/progress/');
+            const data = await response.json();
+            if (data.completed) {
+                updateProgress('All tasks', 100);
+            } else {
+                const tasks = {
+                    'audio_extraction': 10,
+                    'transcription': 30,
+                    'translation': 50,
+                    'text_to_speech': 70,
+                    'merging': 90
+                };
+                for (const [task, percent] of Object.entries(tasks)) {
+                    if (data[task] != undefined) {
+                        updateProgress(task, percent);
+                    }
+                }
+                setTimeout(pollProgress, 2000); // Poll every 2 seconds
+            }
+        }
+
+        // Start polling when the form is submitted
+        document.getElementById('upload-form').addEventListener('submit', (event) => {
+            progressContainer.style.display = 'block';
+            pollProgress();
+        });
+    </script>
+</body>
+</html>

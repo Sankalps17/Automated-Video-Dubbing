@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video Preview</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'dubapp/styles.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>Video Preview and Download</h1>
+        
+        <div class="video-container">
+            <video width="600" controls>
+                <source src="{{ preview_url }}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        
+            <form method="post" action="{% url 'download_video' %}">
+                {% csrf_token %}
+                <input type="hidden" name="file_name" value="{{ output_file_name }}">
+                <button type="submit">Download Video</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
